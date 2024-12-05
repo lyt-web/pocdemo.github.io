@@ -8,6 +8,11 @@
     <title>poc</title> 
     </head> 
     <body> 
-        <script> var onUserInfoUpdated = function(p1){ alert(p1); } </script> 
+        <script> 
+            alert(Transsion.getUserId());
+            alert(Transsion.getToken());
+            alert(Transsion.getLanguage());
+            Transsion.openAppLink("https://www.baidu.com");
+        </script> 
     </body> 
 </html> 
